@@ -2,154 +2,113 @@
 
 namespace App\Services;
 
-use Intervention\Image\ImageManager;
-use Intervention\Image\Drivers\Gd\Driver;
-use Illuminate\Support\Facades\Storage;
 use App\Models\EmployeeId;
+use App\Models\Setting;
+use Illuminate\Support\Facades\Storage;
+use PhpOffice\PhpWord\TemplateProcessor;
 
 class IDCardGenerator
 {
-    protected ImageManager $imageManager;
     protected QRCodeGenerator $qrCodeGenerator;
 
     public function __construct()
     {
-        $this->imageManager = new ImageManager(new Driver());
         $this->qrCodeGenerator = new QRCodeGenerator();
     }
 
     /**
-     * Generate ID card image
+     * Generate ID card document from a DOCX template.
      */
     public function generate(EmployeeId $employeeId): string
     {
-        // Set up canvas dimensions (standard ID card is 3.5" x 2.125" at 300dpi)
-        $width = 1050;
-        $height = 637;
+        $templatePath = $this->resolveTemplatePath();
 
-        // Create base image with white background
-        $image = $this->imageManager->create($width, $height)
-            ->fill('ffffff');
+        $template = new TemplateProcessor($templatePath);
+        $qrAbsolutePath = $this->generateQrForEmployee($employeeId);
+        $profileAbsolutePath = $this->resolveProfilePicturePath($employeeId);
 
-        // Add simple design
-        $this->addDesign($image, $width, $height);
+        $template->setValue('FIRST_NAME', $employeeId->first_name ?? '');
+        $template->setValue('MIDDLE_INITIAL', strtoupper((string) ($employeeId->middle_initial ?? '')));
+        $template->setValue('LAST_NAME', $employeeId->last_name ?? '');
+        $template->setValue('DESIGNATION', $employeeId->designation ?? '');
+        $template->setValue('OFFICE_NAME', $employeeId->office_name ?? '');
+        $template->setValue('ID_NUMBER', $employeeId->id_number ?? '');
+        $template->setValue('FULL_NAME', trim((string) $employeeId->full_name));
 
-        // Add employee information text
-        $this->addEmployeeInfo($image, $employeeId, $width, $height);
+        if ($profileAbsolutePath !== null) {
+            $template->setImageValue('PROFILE_PICTURE', [
+                'path' => $profileAbsolutePath,
+                'ratio' => true,
+                'width' => 170,
+                'height' => 170,
+            ]);
+        } else {
+            $template->setValue('PROFILE_PICTURE', '');
+        }
 
-        // Add QR code if possible
-        $this->addQRCode($image, $employeeId, $width, $height);
+        $template->setImageValue('QR_CODE', [
+            'path' => $qrAbsolutePath,
+            'ratio' => true,
+            'width' => 120,
+            'height' => 120,
+        ]);
 
-        // Save ID card image
-        $filename = 'id_cards/' . $employeeId->id . '_' . uniqid() . '.png';
-        Storage::disk('public')->put($filename, $image->toPng());
+        $filename = 'id_cards/' . $employeeId->id . '_' . uniqid('', true) . '.docx';
+        $outputPath = Storage::disk('public')->path($filename);
+        $outputDirectory = dirname($outputPath);
+        if (! is_dir($outputDirectory)) {
+            mkdir($outputDirectory, 0755, true);
+        }
+        $template->saveAs($outputPath);
 
         return $filename;
     }
 
-    /**
-     * Add simple design elements
-     */
-    protected function addDesign($image, $width, $height): void
+    protected function resolveProfilePicturePath(EmployeeId $employeeId): ?string
     {
-        // This is a simplified design - just add colored background areas using fill
-        // Intervention Image 3.x doesn't have the same drawing API as 2.x
-    }
-
-    /**
-     * Add employee information text to the card
-     */
-    protected function addEmployeeInfo($image, EmployeeId $employeeId, $width, $height): void
-    {
-        $startX = 50;
-        $startY = 80;
-        $lineHeight = 50;
-
-        // ID Number
-        $image->text(
-            'ID: ' . $employeeId->id_number,
-            $startX,
-            $startY,
-            function ($text) {
-                $text->size(16);
-                $text->color('#003d7a');
-            }
-        );
-
-        // Full Name
-        $image->text(
-            strtoupper($employeeId->full_name),
-            $startX,
-            $startY + $lineHeight,
-            function ($text) {
-                $text->size(18);
-                $text->color('#003d7a');
-            }
-        );
-
-        // Designation
-        $image->text(
-            'Designation: ' . $employeeId->designation,
-            $startX,
-            $startY + ($lineHeight * 2),
-            function ($text) {
-                $text->size(12);
-                $text->color('#666');
-            }
-        );
-
-        // Office
-        $image->text(
-            'Office: ' . $employeeId->office_name,
-            $startX,
-            $startY + ($lineHeight * 3),
-            function ($text) {
-                $text->size(11);
-                $text->color('#666');
-            }
-        );
-    }
-
-    /**
-     * Add QR code to the ID card
-     */
-    protected function addQRCode($image, EmployeeId $employeeId, $width, $height): void
-    {
-        try {
-            // Prepare QR code data
-            $qrData = json_encode([
-                'id_number' => $employeeId->id_number,
-                'name' => $employeeId->full_name,
-                'designation' => $employeeId->designation,
-                'office' => $employeeId->office_name,
-            ]);
-
-            // Generate QR code file
-            $qrFilename = 'temp_qr_' . uniqid() . '.png';
-            $this->qrCodeGenerator->generate($qrData, $qrFilename);
-            
-            $qrPath = Storage::disk('public')->path($qrFilename);
-            if (file_exists($qrPath)) {
-                $qrImage = $this->imageManager->read($qrPath);
-                
-                // Resize QR code
-                $qrSize = 120;
-                $qrImage = $qrImage->scale(width: $qrSize, height: $qrSize);
-
-                // Add QR code to bottom right
-                $image->place(
-                    $qrImage,
-                    'bottom-right',
-                    20,
-                    20
-                );
-                
-                // Clean up temporary file
-                @unlink($qrPath);
-            }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('QR Code generation failed: ' . $e->getMessage());
+        if (! $employeeId->profile_picture) {
+            return null;
         }
+
+        $path = Storage::disk('public')->path($employeeId->profile_picture);
+
+        return file_exists($path) ? $path : null;
+    }
+
+    protected function generateQrForEmployee(EmployeeId $employeeId): string
+    {
+        $qrPayload = collect([
+            trim((string) $employeeId->full_name),
+            trim((string) ($employeeId->designation ?? '')),
+            trim((string) ($employeeId->office_name ?? '')),
+        ])
+            ->filter(fn (string $value): bool => $value !== '')
+            ->implode("\n");
+
+        $qrFilename = 'qrcodes/qr_' . $employeeId->id . '_' . uniqid('', true) . '.png';
+        $storedPath = $this->qrCodeGenerator->generate($qrPayload, $qrFilename);
+
+        return Storage::disk('public')->path($storedPath);
+    }
+
+    protected function resolveTemplatePath(): string
+    {
+        $stored = Setting::get('id_card_docx_template_path');
+        if ($stored) {
+            $full = Storage::disk('local')->path($stored);
+            if (file_exists($full)) {
+                return $full;
+            }
+        }
+
+        $fallback = resource_path('templates/id-card-template.docx');
+        if (! file_exists($fallback)) {
+            throw new \RuntimeException(
+                'DOCX template not found. Upload one in Admin → Settings → ID card template, or add resources/templates/id-card-template.docx'
+            );
+        }
+
+        return $fallback;
     }
 }
 

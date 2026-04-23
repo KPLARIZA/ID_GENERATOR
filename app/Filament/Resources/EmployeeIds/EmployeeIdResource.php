@@ -66,6 +66,7 @@ class EmployeeIdResource extends Resource
                 //
             ])
             ->recordActions([
+                Actions\ViewAction::make(),
                 Actions\EditAction::make(),
             ])
             ->toolbarActions([

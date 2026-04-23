@@ -9,41 +9,25 @@
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <x-filament::field-wrapper>
-                            <x-slot name="label">
-                                ID Number
-                            </x-slot>
-                            <div class="text-lg font-bold text-primary-600">
-                                {{ $this->record->id_number }}
-                            </div>
-                        </x-filament::field-wrapper>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">ID Number</p>
+                        <div class="text-lg font-bold text-primary-600">
+                            {{ $this->record->id_number }}
+                        </div>
                     </div>
                     
                     <div>
-                        <x-filament::field-wrapper>
-                            <x-slot name="label">
-                                Full Name
-                            </x-slot>
-                            <div>{{ $this->record->full_name }}</div>
-                        </x-filament::field-wrapper>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Full Name</p>
+                        <div>{{ $this->record->full_name }}</div>
                     </div>
 
                     <div>
-                        <x-filament::field-wrapper>
-                            <x-slot name="label">
-                                Designation
-                            </x-slot>
-                            <div>{{ $this->record->designation }}</div>
-                        </x-filament::field-wrapper>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Designation</p>
+                        <div>{{ $this->record->designation }}</div>
                     </div>
 
                     <div>
-                        <x-filament::field-wrapper>
-                            <x-slot name="label">
-                                Office
-                            </x-slot>
-                            <div>{{ $this->record->office_name }}</div>
-                        </x-filament::field-wrapper>
+                        <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Office</p>
+                        <div>{{ $this->record->office_name }}</div>
                     </div>
                 </div>
             </x-filament::section>
@@ -67,21 +51,15 @@
             @if($this->record->id_card_image)
             <x-filament::section>
                 <x-slot name="heading">
-                    Generated ID Card
+                    Generated ID Document
                 </x-slot>
 
                 <div class="flex flex-col items-center gap-4">
-                    <div class="border-2 border-gray-200 rounded-lg overflow-hidden shadow-lg">
-                        <img src="{{ Storage::disk('public')->url($this->record->id_card_image) }}" 
-                             alt="ID Card" 
-                             class="h-auto w-full max-w-md">
-                    </div>
-                    
                     <div class="flex gap-2">
                         <a href="{{ Storage::disk('public')->url($this->record->id_card_image) }}" 
-                           download="ID_{{ $this->record->id_number }}.png"
+                           download="ID_{{ $this->record->id_number }}.docx"
                            class="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                            Download ID Card
+                            Download ID DOCX
                         </a>
                     </div>
                 </div>
@@ -89,10 +67,10 @@
             @else
             <x-filament::section>
                 <x-slot name="heading">
-                    ID Card
+                    ID Document
                 </x-slot>
                 <p class="text-sm text-gray-600">
-                    No ID card has been generated yet. Click the "Generate ID Card" button to create one.
+                    No ID document has been generated yet. Click the "Generate ID Card" button to create one.
                 </p>
             </x-filament::section>
             @endif
