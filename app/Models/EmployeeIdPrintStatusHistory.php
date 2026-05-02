@@ -9,8 +9,12 @@ class EmployeeIdPrintStatusHistory extends Model
 {
     protected $fillable = [
         'employee_id_id',
+        'event_type',
+        'field_name',
         'old_status',
         'new_status',
+        'old_value',
+        'new_value',
         'changed_by',
         'changed_at',
     ];
