@@ -8,4 +8,6 @@ use Filament\Resources\Pages\ViewRecord;
 class ViewEmployeeId extends ViewRecord
 {
     protected static string $resource = EmployeeIdResource::class;
+
+    protected string $view = 'filament.resources.employee-ids.pages.view-employee-id';
 }

@@ -6,6 +6,8 @@ use App\Filament\Resources\EmployeeIds\EmployeeIdResource;
 use App\Services\IDCardGenerator;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\Action;
+use Filament\Notifications\Actions\Action as NotificationAction;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Storage;
 
@@ -19,19 +21,27 @@ class EditEmployeeId extends EditRecord
             Action::make('generateIDCard')
                 ->label('Generate ID Card')
                 ->icon('heroicon-o-document')
-                ->action(function () {
+                ->action(function (): void {
                     try {
                         $generator = new IDCardGenerator();
                         $filename = $generator->generate($this->record);
-                        
-                        // Update the record with the generated ID card path
                         $this->record->update(['id_card_image' => $filename]);
-                        
-                        // Download the generated ID card
-                        return response()->download(Storage::disk('public')->path($filename), 
-                            'ID_' . $this->record->id_number . '.png');
-                    } catch (\Exception $e) {
-                        $this->addError('id_card_generation', 'Failed to generate ID card: ' . $e->getMessage());
+
+                        Notification::make()
+                            ->title('ID document generated successfully')
+                            ->actions([
+                                NotificationAction::make('download')
+                                    ->label('Download DOCX')
+                                    ->url(Storage::disk('public')->url($filename), shouldOpenInNewTab: true),
+                            ])
+                            ->success()
+                            ->send();
+                    } catch (\Throwable $e) {
+                        Notification::make()
+                            ->title('Failed to generate ID card')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
                     }
                 })
                 ->requiresConfirmation()

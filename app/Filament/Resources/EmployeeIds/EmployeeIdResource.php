@@ -57,15 +57,24 @@ class EmployeeIdResource extends Resource
                     ->label('Office')
                     ->sortable()
                     ->searchable(),
+
+                Tables\Columns\SelectColumn::make('print_status')
+                    ->label('Print Status')
+                    ->options(EmployeeId::getPrintStatusOptions())
+                    ->selectablePlaceholder(false)
+                    ->sortable(),
                 
                 Tables\Columns\ImageColumn::make('profile_picture')
                     ->label('Picture')
                     ->circular(),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('print_status')
+                    ->label('Print Status')
+                    ->options(EmployeeId::getPrintStatusOptions()),
             ])
             ->recordActions([
+                Actions\ViewAction::make(),
                 Actions\EditAction::make(),
             ])
             ->toolbarActions([

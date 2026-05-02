@@ -2,19 +2,21 @@
 
 namespace App\Filament\Resources\EmployeeIds\Schemas;
 
+use App\Models\EmployeeId;
 use Filament\Forms\Components\FileUpload;
-use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 
 class EmployeeIdForm
 {
-    public static function configure(Schemas\Schema $schema): Schemas\Schema
+    public static function configure(Schema $schema): Schema
     {
         return $schema
-            ->schema([
+            ->components([
                 Section::make('Employee Information')
-                    ->schema([
+                    ->components([
                         TextInput::make('id_number')
                             ->label('ID Number')
                             ->required()
@@ -39,7 +41,7 @@ class EmployeeIdForm
                     ->columns(2),
                 
                 Section::make('Position & Office')
-                    ->schema([
+                    ->components([
                         TextInput::make('designation')
                             ->label('Designation')
                             ->required()
@@ -57,13 +59,23 @@ class EmployeeIdForm
                     ->columns(2),
                 
                 Section::make('Profile Picture')
-                    ->schema([
+                    ->components([
                         FileUpload::make('profile_picture')
                             ->label('Profile Picture')
                             ->image()
                             ->directory('profile-pictures')
                             ->maxSize(5120)
                             ->helperText('Optional - Upload a profile picture for the ID card (max 5MB)'),
+                    ]),
+
+                Section::make('Print tracking')
+                    ->components([
+                        Select::make('print_status')
+                            ->label('Print Status')
+                            ->options(EmployeeId::getPrintStatusOptions())
+                            ->default(EmployeeId::PRINT_STATUS_IN_PROGRESS)
+                            ->required()
+                            ->native(false),
                     ]),
             ]);
     }
