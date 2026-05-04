@@ -196,9 +196,65 @@ class IdCreationDashboard extends Page
             ->components([
                 Form::make([EmbeddedSchema::make('form')])
                     ->id('id-creation-form'),
+<<<<<<< HEAD
             ]);
     }
 
+=======
+                Section::make('Dashboard tracker: print status')
+                    ->description('Track IDs that are still in progress versus done printing.')
+                    ->components([
+                        View::make('filament.pages.partials.print-status-tracker')
+                            ->viewData(fn (): array => [
+                                'trackerRows' => $this->getRecentPrintTrackerRows(),
+                                'statusSummary' => $this->getPrintStatusSummary(),
+                            ]),
+                    ]),
+            ]);
+    }
+
+    /**
+     * @return array{in_progress: int, done_printing: int, cancelled: int}
+     */
+    public function getPrintStatusSummary(): array
+    {
+        $counts = EmployeeId::query()
+            ->selectRaw('print_status, COUNT(*) as total')
+            ->groupBy('print_status')
+            ->pluck('total', 'print_status');
+
+        return [
+            'in_progress' => (int) ($counts[EmployeeId::PRINT_STATUS_IN_PROGRESS] ?? 0),
+            'done_printing' => (int) ($counts[EmployeeId::PRINT_STATUS_DONE_PRINTING] ?? 0),
+            'cancelled' => (int) ($counts[EmployeeId::PRINT_STATUS_CANCELLED] ?? 0),
+        ];
+    }
+
+    /**
+     * @return array<int, array{id_number: string, full_name: string, office_name: string, print_status: string, updated_at: string}>
+     */
+    public function getRecentPrintTrackerRows(int $limit = 10): array
+    {
+        return EmployeeId::query()
+            ->select(['id_number', 'first_name', 'middle_initial', 'last_name', 'office_name', 'print_status', 'updated_at'])
+            ->orderByDesc('updated_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn (EmployeeId $record): array => [
+                'id_number' => (string) $record->id_number,
+                'full_name' => trim(collect([
+                    $record->first_name,
+                    $record->middle_initial ? rtrim((string) $record->middle_initial, '.') . '.' : null,
+                    $record->last_name,
+                ])->filter()->implode(' ')),
+                'office_name' => (string) $record->office_name,
+                'print_status' => (string) $record->print_status,
+                'updated_at' => (string) optional($record->updated_at)?->format('M d, Y h:i A'),
+            ])
+            ->all();
+    }
+
+>>>>>>> Shunbranch
     protected function getProfilePreviewUrl(): ?string
     {
         $raw = $this->data['profile_picture'] ?? null;
